@@ -1,49 +1,56 @@
 from igraph import *
 import matplotlib.pyplot as plt
 import numpy
+import numpy as np
 
 def main():
     graph = Graph.Read_Ncol("myGraph.ncol", names=True, weights='auto', directed=True)     # Lendo o grafo
     openVertices = []
     visited = []
-    graph.vs['weight'] = 'i'
-    cost = numpy.zeros((len(graph.vs), 2), str)  # Cria uma matriz
+    graph.vs['dist'] = np.inf
+    currentVertex = None
 
-    i = 0
-    for vertex in graph.vs:                     # Acha o vertice inicial, define os custos e os vertices abertos
+    for vertex in graph.vs:                     # Define todos os vertices como abertos e com valor infinito
         openVertices.append(vertex)
-        cost[i][0] = vertex['name']
-        cost[i][1] = 'i'                        # Define o custo dos vertices como infinito -> i
-        if vertex['name'] == '1':
-            firstVertex = vertex
-            visited.append(vertex)
-            openVertices.remove(vertex)
-            cost[i][1] = '0'
-        i += 1
+        graph.vs[vertex.index]['dist'] = np.inf
 
-    shortestPath = []
-    for vertex in openVertices:
-        shortestPath.append(graph.get_shortest_paths(firstVertex, to=vertex, weights=None, mode='out', output='vpath'))
-        visited.append(vertex)
+    first = True
+    while len(openVertices) > 0:
+        if first:                           # Define o vertice de index 0 como o primeiro a rodar
+            graph.vs[0]['dist'] = 0
+            currentVertex = graph.vs[0]
+            first = False
+        else:                               # Encontra o vertice atual
+            smaller = np.inf
+            for vertex in graph.vs:
+                if vertex in openVertices and graph.vs[vertex.index]["dist"] <= smaller:
+                    currentVertex = vertex
+                    smaller = graph.vs[vertex.index]["dist"]
 
-    print('*'*20 + '\n' + 'Vertex and Index' + '\n' + '*'*20)
+        visited.append(currentVertex)
+        openVertices.remove(currentVertex)
+        s = []
+
+        for vertex in openVertices:
+            if vertex.index in graph.neighbors(currentVertex, mode='out'):
+                s.append(vertex)
+
+
+        for v in range(0, len(s)):
+            p = np.inf
+            if len(s) >= 2:
+                p = graph.es.select(_source=currentVertex.index,_target=s[v].index)['weight'][0]
+            if p < graph.vs[s[v].index]["dist"]:
+                graph.vs[s[v].index]["dist"] = p + currentVertex['dist']
+        currentVertex = None
+
+
+    print('*' * 19 + '\n' + '* Vertex * Weight *' + '\n' + '*' * 19)
     for vertex in graph.vs:
-        print(f'Vertex: {vertex["name"]} Index: {vertex.index}')
-    print('*'*20 + '\n')
+        print(f'   {graph.vs[vertex.index]["name"]}         {graph.vs[vertex.index]["dist"]}')
+    print('*' * 19)
 
-    print('*'*20 + '\n' + 'All shortest paths by index' + '\n' + '*'*20)
-    for paths in shortestPath:
-        print(f'{paths}')
-    print('*' * 20 + '\n')
 
-    print('*'*20 + '\n' + 'Vertices and Weights' + '\n' + '*'*20)
-    for x in range(0, len(graph.vs)):
-        print(f'Vertex: {cost[x][0]} Weight: {cost[x][1]}')
-    print('*'*20 + '\n')
-
-    # for weights in graph.es:
-    #     print(weights['weight'])
-    #     cost[i][1] = weights['weight']
 
 if __name__ == '__main__':
     main()
